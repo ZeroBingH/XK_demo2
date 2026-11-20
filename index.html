@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>胸心共病风险评估与预警平台</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <script src="js/echarts.min.js"></script>
+  <script>
+    if (typeof echarts === 'undefined') {
+      document.write('<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"><\/script>');
+    }
+  </script>
+</head>
+<body>
+  <div class="app">
+    <!-- ===================== 侧边栏 ===================== -->
+    <aside class="sidebar" id="sidebar">
+      <div class="brand">
+        <div class="brand-logo">🫁</div>
+        <div class="brand-text">
+          <div class="brand-title">胸心共病风险评估</div>
+          <div class="brand-sub">与预警平台</div>
+        </div>
+      </div>
+
+      <nav class="nav" id="nav">
+        <div class="nav-group-label">总览</div>
+        <a class="nav-item active" data-view="dashboard" href="javascript:void(0)">
+          <span class="nav-icon">📊</span><span>统计看板</span>
+        </a>
+        <div class="nav-group-label">风险预警</div>
+        <a class="nav-item" data-view="patients" href="javascript:void(0)">
+          <span class="nav-icon">🧑‍⚕️</span><span>患者列表与预警</span>
+        </a>
+        <div class="nav-group-label">评估记录</div>
+        <a class="nav-item" data-view="records" href="javascript:void(0)">
+          <span class="nav-icon">🗂️</span><span>模型评估记录</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="sidebar-note">上海市胸科医院 · 胸心共病专病库<br/>多模态临床数据驱动</div>
+      </div>
+    </aside>
+
+    <!-- ===================== 主区域 ===================== -->
+    <div class="main">
+      <header class="topbar">
+        <div class="topbar-left">
+          <h1 class="page-title" id="pageTitle">统计看板</h1>
+          <span class="page-sub" id="pageSub">四大并发症风险全景与趋势洞察</span>
+        </div>
+        <div class="topbar-right">
+          <div class="topbar-date">📅 2026年11月19日 周四</div>
+          <div class="topbar-user">
+            <div class="avatar">医</div>
+            <div class="user-info">
+              <div class="user-name">张医生</div>
+              <div class="user-role">胸外科 · 主诊医师</div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main class="content">
+        <!-- ========== 视图一：统计看板 ========== -->
+        <section class="view" id="view-dashboard">
+          <!-- 顶部指标卡 -->
+          <div class="stat-cards" id="statCards"></div>
+
+          <!-- 四大并发症风险分布 -->
+          <div class="grid-4" id="riskDistribution"></div>
+
+          <!-- 风险趋势 -->
+          <div class="panel" id="trendPanel">
+            <div class="panel-head">
+              <h2 class="panel-title">📈 高危风险趋势 <span class="panel-tag">近 14 日高危率变化</span></h2>
+              <div class="legend-inline" id="trendLegend"></div>
+            </div>
+            <div class="chart" id="trendChart" style="height:320px"></div>
+          </div>
+
+          <!-- 特征重要性 + 风险曲线 -->
+          <div class="grid-2">
+            <div class="panel">
+              <div class="panel-head">
+                <h2 class="panel-title">🔝 全人群核心评估特征排行榜</h2>
+                <select class="select" id="featureCompSelect" onchange="switchFeatureComp()"></select>
+              </div>
+              <div class="chart" id="featureChart" style="height:340px"></div>
+            </div>
+            <div class="panel">
+              <div class="panel-head">
+                <h2 class="panel-title">〰️ 核心指标非线性风险走势</h2>
+                <select class="select" id="curveCompSelect" onchange="switchCurveComp()"></select>
+              </div>
+              <div class="chart" id="curveChart" style="height:340px"></div>
+            </div>
+          </div>
+
+          <!-- 高危患者科室分布 -->
+          <div class="panel">
+            <div class="panel-head">
+              <h2 class="panel-title">🏥 高危患者科室分布</h2>
+              <span class="panel-tag">按四大并发症分组的科室高危人数</span>
+            </div>
+            <div class="chart" id="deptChart" style="height:320px"></div>
+          </div>
+        </section>
+
+        <!-- ========== 视图二：患者列表 ========== -->
+        <section class="view hidden" id="view-patients">
+          <!-- 四大并发症标签页 -->
+          <div class="comp-tabs" id="compTabs"></div>
+
+          <!-- 筛选栏 -->
+          <div class="filter-bar panel">
+            <div class="filter-item">
+              <label>关键词</label>
+              <input type="text" id="filterKeyword" class="input" placeholder="姓名 / 病历号 / 住院号" oninput="applyFilters()" />
+            </div>
+            <div class="filter-item">
+              <label>风险等级</label>
+              <select class="select" id="filterRisk" onchange="applyFilters()">
+                <option value="all">全部</option>
+                <option value="HIGH_RISK">🔴 高危</option>
+                <option value="LOW_RISK">🔵 低危</option>
+              </select>
+            </div>
+            <div class="filter-item">
+              <label>科室</label>
+              <select class="select" id="filterDept" onchange="applyFilters()"></select>
+            </div>
+            <div class="filter-item">
+              <label>手术方式</label>
+              <select class="select" id="filterSurgery" onchange="applyFilters()"></select>
+            </div>
+            <div class="filter-item">
+              <label>性别</label>
+              <select class="select" id="filterGender" onchange="applyFilters()">
+                <option value="all">全部</option>
+                <option value="男">男</option>
+                <option value="女">女</option>
+              </select>
+            </div>
+            <div class="filter-item">
+              <label>患者类型</label>
+              <select class="select" id="filterType" onchange="applyFilters()">
+                <option value="all">全部</option>
+                <option value="住院">🏥 住院</option>
+                <option value="门诊">🏠 门诊</option>
+              </select>
+            </div>
+            <div class="filter-item">
+              <label>排序</label>
+              <select class="select" id="filterSort" onchange="applyFilters()">
+                <option value="risk_desc">风险概率 ↓</option>
+                <option value="risk_asc">风险概率 ↑</option>
+                <option value="age_desc">年龄 ↓</option>
+                <option value="admit_desc">就诊/入院时间 ↓</option>
+              </select>
+            </div>
+            <button class="btn-reset" onclick="resetFilters()">↺ 重置</button>
+          </div>
+
+          <!-- 统计摘要条 -->
+          <div class="list-summary" id="listSummary"></div>
+
+          <!-- 患者表格 -->
+          <div class="panel table-panel">
+            <div class="table-wrap">
+              <table class="data-table" id="patientTable">
+                <thead id="patientTableHead"></thead>
+                <tbody id="patientTableBody"></tbody>
+              </table>
+              <div class="empty" id="tableEmpty" style="display:none">未找到符合条件的患者</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ========== 视图三：模型评估记录 ========== -->
+        <section class="view hidden" id="view-records">
+          <!-- 患者选择器 -->
+          <div class="filter-bar panel">
+            <div class="filter-item">
+              <label>选择患者</label>
+              <select class="select" id="recPatientSelect" style="width:300px" onchange="onRecordPatientChange(this.value)"></select>
+            </div>
+            <div class="filter-item">
+              <label>关键词</label>
+              <input type="text" id="recPatientKeyword" class="input" style="width:220px" placeholder="搜索姓名 / 病历号" oninput="renderRecordPatientOptions()" />
+            </div>
+          </div>
+          <div id="patientRecordsWrap"></div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <!-- ===================== 详情抽屉 ===================== -->
+  <div class="drawer-mask" id="drawerMask" onclick="closeDetail()"></div>
+  <aside class="drawer" id="detailDrawer">
+    <div class="drawer-head">
+      <div class="drawer-patient" id="drawerPatient"></div>
+      <button class="drawer-close" onclick="closeDetail()">✕</button>
+    </div>
+    <div class="drawer-body" id="drawerBody"></div>
+  </aside>
+
+  <!-- ===================== 重新评估弹窗 ===================== -->
+  <div class="modal-mask" id="rePredictMask" onclick="closeRePredict()"></div>
+  <div class="modal" id="rePredictModal">
+    <div class="modal-head">
+      <div class="modal-title">🔁 重新评估</div>
+      <button class="drawer-close" onclick="closeRePredict()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-patient" id="rePredictPatientInfo"></div>
+      <div class="modal-hint">请选择需要重新评估的模型（可多选）。每个模型将生成一条独立的评估记录，互不影响。</div>
+      <div class="re-model-list" id="rePredictModelList"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-reset" onclick="closeRePredict()">取消</button>
+      <button class="btn-primary" onclick="confirmRePredict()">确认重新评估</button>
+    </div>
+  </div>
+
+  <!-- ===================== 单次评估记录详情抽屉 ===================== -->
+  <div class="drawer-mask" id="predDetailMask" onclick="closePredictionDetail()"></div>
+  <aside class="drawer" id="predDetailDrawer">
+    <div class="drawer-head">
+      <div class="drawer-patient" id="predDetailHead"></div>
+      <button class="drawer-close" onclick="closePredictionDetail()">✕</button>
+    </div>
+    <div class="drawer-body" id="predDetailBody"></div>
+  </aside>
+
+  <script src="js/data.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
